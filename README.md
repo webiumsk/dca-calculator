@@ -84,7 +84,9 @@ npm run preview
 CSV format expected by the app:
 
 date,price
+
 2013-04-28 00:00:00 UTC,135.3
+
 2013-04-29 00:00:00 UTC,141.96
 
 ### Columns:
@@ -96,6 +98,7 @@ date,price
 Files should be placed in:
 
 public/btc-history-eur.csv
+
 public/btc-history-usd.csv
 
 If missing, the app will display an error when calculating.
