@@ -4,6 +4,10 @@ No backend. No tracking. All price data is loaded from local CSV files or cached
 
 [DEMO](https://dca.dvadsatjeden.org)
 
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Svelte](https://img.shields.io/badge/svelte-5.43.8-61dafb.svg)
+![Vite](https://img.shields.io/badge/vite-7.2.4-646cff.svg)
+
 ---
 
 ## 🚀 Features
@@ -37,10 +41,9 @@ public/btc-history-usd.csv
 - Local caching of parsed CSV data
 
 ### 🌒 UI & UX
-- Dark mode toggle  
 - Multilanguage support (EN / SK)  
 - Export results to CSV  
-- Print / PDF export  
+- Share results to X, FB or copy the text  
 - Accessible and lightweight
 
 ---
@@ -103,6 +106,19 @@ public/btc-history-usd.csv
 
 If missing, the app will display an error when calculating.
 
+### Updating the data
+
+Setup a cron (once a day) to fetch the prices from Coingecko
+```bash
+wget -q -O /dev/null "https://YOUR_DOMAIN/update-prices.php
+```
+or
+```bash
+curl -fsS "https://YOUR_DOMAIN/update-prices.php" > /dev/null
+
+```
+Or run the script from your browser
+
 ---
 
 ### 🔐 Privacy
@@ -122,6 +138,41 @@ MIT License
 Pull requests are welcome!
 If you want to add features (e.g., more charts, additional currencies, languages), feel free to open an issue.
 
+
+## 👤 Author
+
+**SiriusBig**
+- GitHub: [@webiumsk](https://github.com/webiumsk)
+- Website: [webium.sk](https://www.webium.sk)
+
+---
+
 ### 🧡 Acknowledgements
 
 Project inspired by the idea of helping newcomers understand long-term Bitcoin saving strategies.
+- [CoinGecko API](https://www.coingecko.com/en/api) for BTC prices history
+- [Dvadsatjeden](https://www.dvadsatjeden.org/) Bitcoin community for inspiration
+
+## ⭐ Support
+
+If you find this project useful, please consider:
+
+- ⭐ Starring the repository
+- 🐛 Reporting bugs
+- 💡 Suggesting new features
+- 🔀 Contributing code
+- ⚡ Donating to [sirius@dvadsatjeden.org](lightning:sirius@dvadsatjeden.org)
+
+---
+
+## 📄 Changelog
+
+### v1.0.1 (6. Dec 2025)
+- Removed Dark Mode theme toggle
+- Added Sharing options
+- Added PHP script for daily price updates via cron
+- Added footer
+- Small visual fixes
+
+### v1.0.0 (5. Dec 2025)
+- Brought to life 

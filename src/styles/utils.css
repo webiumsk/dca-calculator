@@ -1,0 +1,51 @@
+/* Flex utilities */
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-sm {
+    gap: var(--space-sm);
+}
+
+.gap-md {
+    gap: var(--space-md);
+}
+
+/* Spacing */
+.p-md {
+    padding: var(--space-md);
+}
+
+.mt-lg {
+    margin-top: var(--space-lg);
+}
+
+/* Typography */
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.font-bold {
+    font-weight: 600;
+}
+
+/* Colors */
+.text-positive {
+    color: var(--color-positive);
+}
+
+.text-negative {
+    color: var(--color-negative);
+}
