@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Footer from "./components/Footer.svelte";
+  
   // --- Types ---
   type Frequency = 'daily' | 'weekly' | 'bi-weekly' | 'monthly';
   type Currency = 'eur' | 'usd';
@@ -15,12 +17,12 @@
     price: number;
   }
 
-  // --- Simple i18n dictionary (EN/SK) ---
+  // Simple i18n dictionary (EN/SK)
   const translations = {
     en: {
-      title: 'Bitcoin DCA Calculator',
-      description:
-        'Simulate how much Bitcoin you would have today if you had stacked sats regularly over time.',
+      title: 'BTC DCA Calculator',
+      description:'Simulate how much Bitcoin you would have today if you had stacked sats regularly over time with ',
+      dcaTooltip: 'Dollar Cost Averaging - An investment strategy that uses a fixed amount of dollars (or other currencies) to purchase an asset at regular intervals. For Bitcoin investing, this means buying BTC with a fixed amount of fiat currency at regular intervals, regardless of what the BTC price happens to be at any given moment.',
       language: 'Language',
       frequency: 'Frequency',
       freqDaily: 'Daily',
@@ -58,13 +60,19 @@
       loading: 'Calculating DCA and loading BTC prices...',
       error: 'Something went wrong while loading data. Please try again.',
       noData: 'Fill the form and hit Calculate to see results.',
-      darkMode: 'Dark mode',
       apiNote: 'Prices loaded from public Bitcoin price API.',
+      otherTools: 'Other tools',
+      more: 'More',
+      supportMe: 'Support me',
+      sendLightning: 'Send Lightning',
+      copied: 'Copied!',
+      madeWith: 'Made with 🧡 for',
+      and: 'and',
     },
     sk: {
-      title: 'Bitcoin DCA kalkulačka',
-      description:
-        'Pozri sa, koľko BTC by si mal dnes, keby si pravidelne nakupoval za rovnakú sumu.',
+      title: 'BTC DCA kalkulačka',
+      description: 'Pozri sa, koľko BTC by si mal dnes, keby si pravidelne nakupoval za rovnakú sumu metódou',
+      dcaTooltip: 'DCA = Dollar Cost Averaging - Investičná stratégia využívajúca fixnú sumu dolárov (alebo iných mien) na nákup aktíva v pravidelných intervaloch. Pre bitcoinové investovanie to znamená nakupovanie BTC s fixným množstvom fiat meny v pravidelných intervaloch bez ohľadu na to, aká je cena BTC v akomkoľvek danom intervale.',
       language: 'Jazyk',
       frequency: 'Frekvencia',
       freqDaily: 'Denne',
@@ -102,15 +110,22 @@
       loading: 'Počítam DCA a sťahujem ceny BTC...',
       error: 'Počas načítavania nastala chyba. Skús to znova.',
       noData: 'Vyplň formulár a klikni na Vypočítať.',
-      darkMode: 'Dark mód',
       apiNote: 'Ceny sú načítané z verejného Bitcoin API.',
+      otherTools: 'Ďalšie nástroje',
+      more: 'Viac',
+      supportMe: 'Podpor ma',
+      sendLightning: 'Poslať Lightning',
+      copied: 'Skopírované!',
+      madeWith: 'Vyrobené s 🧡 pre',
+      and: 'a',
     },
   } as const;
 
   const SHOW_LUMP_SUM_KEY = 'dca_show_lump_sum';
 
-  // --- State ---
+  // State
   let lang: 'en' | 'sk' = 'en';
+  let showTooltip = false;
 
   let frequency: Frequency = 'monthly';
   let amountPerPeriod = 100;
@@ -143,9 +158,13 @@
     valuePath: '',
   };
 
-  let darkMode = true;
+  let settingsLoaded = false;
 
-  // --- LocalStorage helpers for caching API responses ---
+  // Share panel state
+  let showSharePanel = false;
+  let shareCopied = false;
+
+  // LocalStorage helpers for caching API responses 
   const CACHE_KEY = 'btc_price_cache_v1';
 
   interface CacheEntry {
@@ -156,22 +175,34 @@
 
   onMount(() => {
     try {
-      const saved = localStorage.getItem(SHOW_LUMP_SUM_KEY);
-      if (saved !== null) {
-        showLumpSum = saved === 'true';
+      // load language
+      const savedLang = localStorage.getItem('DCA_LANG');
+      if (savedLang === 'en' || savedLang === 'sk') {
+        lang = savedLang;
+      }
+
+      // load lump sum toggle
+      const savedLump = localStorage.getItem(SHOW_LUMP_SUM_KEY);
+      if (savedLump !== null) {
+        showLumpSum = savedLump === 'true';
       }
     } catch {
       // ignore
     }
+
+    // mark settings as loaded, so we can start saving
+    settingsLoaded = true;
   });
 
-  $: (() => {
+
+  $: if (settingsLoaded) {
     try {
+      localStorage.setItem('DCA_LANG', lang);
       localStorage.setItem(SHOW_LUMP_SUM_KEY, String(showLumpSum));
     } catch {
       // ignore
     }
-  })();
+  }
 
   function loadCache(): CacheEntry[] {
     try {
@@ -210,7 +241,7 @@
     saveCache(entries);
   }
 
-  // --- API: fetch BTC history from local CSV (no backend, no API key) ---
+  // API: fetch BTC history from local CSV (no backend, no API key)
 async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
   const cached = getCachedPrices(currency);
   if (cached) return cached;
@@ -219,7 +250,7 @@ async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
   const file =
     currency === 'eur'
       ? '/btc-history-eur.csv'
-      : '/btc-history-usd.csv'; // or same file if you only have EUR
+      : '/btc-history-usd.csv';
 
   let res: Response;
   try {
@@ -283,7 +314,7 @@ async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
 }
 
 
-  // --- Helper: generate DCA dates ---
+  // Helper: generate DCA dates
   function generateDates(
     start: Date,
     end: Date,
@@ -311,7 +342,7 @@ async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
     return dates;
   }
 
-  // --- Helper: find closest price at or before given date ---
+  // Helper: find closest price at or before given date
   function findPriceForDate(
     prices: BtcPricePoint[],
     date: Date
@@ -338,22 +369,26 @@ async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
     return prices[bestIndex].price;
   }
 
-  // --- Helper: format currency nicely ---
+  // Helper: format currency nicely
   function formatFiat(value: number): string {
-    const locale = lang === 'sk' ? 'sk-SK' : 'en-US';
-    const currencyCode = currency === 'eur' ? 'EUR' : 'USD';
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currencyCode,
-      maximumFractionDigits: 2,
-    }).format(value);
+    const absValue = Math.abs(value);
+    const formatted = absValue.toLocaleString(lang === 'sk' ? 'sk-SK' : 'en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    const prefix = currency === 'usd' ? '$ ' : '';
+    const suffix = currency === 'eur' ? ' €' : '';
+
+    return (value < 0 ? '-' : '') + prefix + formatted + suffix;
   }
+
 
   function formatBtc(value: number): string {
     return value.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
   }
 
-  // --- CSV export ---
+  // CSV export
   function exportCsv() {
     if (!dataPoints.length) return;
 
@@ -376,14 +411,7 @@ async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
     URL.revokeObjectURL(url);
   }
 
-  // --- "PDF" export (simplified: open print dialog) ---
-  //function exportPdf() {
-    // Easiest cross-browser approach is to use the print dialog.
-    // User can choose "Save as PDF".
-   // window.print();
-  //}
-
-  // --- Main calculate function ---
+  // Main calculate function
   async function calculate() {
     errorMessage = null;
     isLoading = true;
@@ -498,62 +526,155 @@ async function fetchBtcHistory(currency: Currency): Promise<BtcPricePoint[]> {
   }
 
   // Build chart paths from provided points (no Svelte magic here)
-function buildChartPaths(points: DataPoint[]) {
-  if (!points || points.length === 0) {
-    return { investedPath: '', valuePath: '' };
+  function buildChartPaths(points: DataPoint[]) {
+    if (!points || points.length === 0) {
+      return { investedPath: '', valuePath: '' };
+    }
+
+    const w = 800;
+    const h = 320;
+    const padding = 20;
+
+    const xs = points.map((_, i) => i);
+    const investedValues = points.map((p) => p.invested);
+    const valueValues = points.map((p) => p.value);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...investedValues, ...valueValues);
+    const maxY = Math.max(...investedValues, ...valueValues);
+
+    const xScale = (x: number) =>
+      padding +
+      (maxX === minX
+        ? (w - 2 * padding) / 2
+        : ((x - minX) / (maxX - minX)) * (w - 2 * padding));
+
+    const yScale = (y: number) =>
+      h -
+      padding -
+      (maxY === minY
+        ? (h - 2 * padding) / 2
+        : ((y - minY) / (maxY - minY)) * (h - 2 * padding));
+
+    const investedPath =
+      'M ' +
+      points
+        .map((p, i) => `${xScale(xs[i])} ${yScale(p.invested)}`)
+        .join(' L ');
+
+    const valuePath =
+      'M ' +
+      points
+        .map((p, i) => `${xScale(xs[i])} ${yScale(p.value)}`)
+        .join(' L ');
+
+    console.log('chart investedPath:', investedPath.slice(0, 80) + '...');
+    console.log('chart valuePath   :', valuePath.slice(0, 80) + '...');
+
+    return { investedPath, valuePath };
   }
 
-  const w = 800;
-  const h = 320;
-  const padding = 20;
-
-  const xs = points.map((_, i) => i);
-  const investedValues = points.map((p) => p.invested);
-  const valueValues = points.map((p) => p.value);
-
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...investedValues, ...valueValues);
-  const maxY = Math.max(...investedValues, ...valueValues);
-
-  const xScale = (x: number) =>
-    padding +
-    (maxX === minX
-      ? (w - 2 * padding) / 2
-      : ((x - minX) / (maxX - minX)) * (w - 2 * padding));
-
-  const yScale = (y: number) =>
-    h -
-    padding -
-    (maxY === minY
-      ? (h - 2 * padding) / 2
-      : ((y - minY) / (maxY - minY)) * (h - 2 * padding));
-
-  const investedPath =
-    'M ' +
-    points
-      .map((p, i) => `${xScale(xs[i])} ${yScale(p.invested)}`)
-      .join(' L ');
-
-  const valuePath =
-    'M ' +
-    points
-      .map((p, i) => `${xScale(xs[i])} ${yScale(p.value)}`)
-      .join(' L ');
-
-  console.log('chart investedPath:', investedPath.slice(0, 80) + '...');
-  console.log('chart valuePath   :', valuePath.slice(0, 80) + '...');
-
-  return { investedPath, valuePath };
-}
-
-
-  // --- React to dark mode toggle by updating <html> class ---
-  $: {
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('dark', darkMode);
+  // Helper: describe period for share text
+  function getPeriodText(): string {
+    if (periodMode === 'years') {
+      if (lang === 'sk') {
+        return `za posledných ${yearsBack} rokov`;
+      } else {
+        return `for the last ${yearsBack} years`;
+      }
+    } else {
+      const from = startDate || '?';
+      const to = endDate || '?';
+      if (lang === 'sk') {
+        return `od ${from} do ${to}`;
+      } else {
+        return `from ${from} to ${to}`;
+      }
     }
   }
+
+  // Helper: describe frequency for share text
+  function getFrequencyText(): string {
+    if (lang === 'sk') {
+      if (frequency === 'daily') return 'každý deň';
+      if (frequency === 'weekly') return 'každý týždeň';
+      if (frequency === 'bi-weekly') return 'každé 2 týždne';
+      return 'každý mesiac';
+    } else {
+      if (frequency === 'daily') return 'every day';
+      if (frequency === 'weekly') return 'every week';
+      if (frequency === 'bi-weekly') return 'every 2 weeks';
+      return 'every month';
+    }
+  }
+
+  // Build share text based on current state
+  function getShareText(): string {
+    if (!dataPoints.length) return '';
+
+    const periodText = getPeriodText();
+    const freqText = getFrequencyText();
+    const amountText = `${amountPerPeriod} ${currency === 'eur' ? 'EUR' : 'USD'}`;
+    const profitText = formatFiat(profit);
+    const profitPct = profitPercent.toFixed(1);
+
+    if (lang === 'sk') {
+      const direction = profit >= 0 ? 'v pluse' : 'v mínuse';
+      return `Ak by som ${periodText} sporil ${freqText} ${amountText} do Bitcoinu, dnes by som bol ${direction} ${profitText} (${profitPct} %).`;
+    } else {
+      const direction = profit >= 0 ? 'up' : 'down';
+      return `If I had stacked ${amountText} into Bitcoin ${freqText} ${periodText}, today I would be ${direction} ${profitText} (${profitPct} %).`;
+    }
+  }
+
+  function getCurrentUrl(): string {
+    if (typeof window === 'undefined') return 'https://dca.dvadsatjeden.org';
+    return window.location.href;
+  }
+
+  // Open X / Twitter
+  function shareToX() {
+    const text = getShareText();
+    if (!text) return;
+    const url = encodeURIComponent(getCurrentUrl());
+    const encodedText = encodeURIComponent(text);
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${url}`;
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  // Open Facebook
+  function shareToFacebook() {
+    const text = getShareText();
+    if (!text) return;
+    const url = encodeURIComponent(getCurrentUrl());
+    const encodedText = encodeURIComponent(text);
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${encodedText}`;
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  // Copy to clipboard
+  async function copyShareText() {
+    const text = getShareText();
+    if (!text || typeof navigator === 'undefined' || !navigator.clipboard) return;
+
+    const full = `${text} ${getCurrentUrl()}`;
+    try {
+      await navigator.clipboard.writeText(full);
+      shareCopied = true;
+      setTimeout(() => (shareCopied = false), 1500);
+    } catch (e) {
+      console.error('Copy failed', e);
+    }
+  }
+
+  function toggleSharePanel() {
+    showSharePanel = !showSharePanel;
+    if (!showSharePanel) {
+      shareCopied = false;
+    }
+  }
+
 </script>
 
 <svelte:head>
@@ -564,85 +685,82 @@ function buildChartPaths(points: DataPoint[]) {
 <div class="app" >
   <main class="container">
     <header class="header">
-      <div>
-        <h1>{translations[lang].title}</h1>
-        <p class="subtitle">{translations[lang].description}</p>
-      </div>
-      <div class="header-controls">
-        <label class="control">
-          <span>{translations[lang].language}</span>
-          <select bind:value={lang}>
-            <option value="sk">SK</option>
-            <option value="en">EN</option>
-          </select>
-        </label>
-
-        <label class="control toggle">
-          <span>{translations[lang].darkMode}</span>
-          <input type="checkbox" bind:checked={darkMode} />
-        </label>
+      <div class="header-content">
+        <div class="header-left">
+          <h1>{translations[lang].title}</h1>
+          <p class="subtitle">{translations[lang].description} <button class="hover-term"
+            on:mouseenter={() => showTooltip = true}
+            on:mouseleave={() => showTooltip = false}
+            on:click={() => (showTooltip = !showTooltip)}
+          >DCA <span class="info-icon">ⓘ</span></button></p>
+          {#if showTooltip}
+            <div class="tooltip">
+              {translations[lang].dcaTooltip}
+            </div>
+          {/if}
+        </div>
+        
+        <div class="header-right">          
+          <div class="switcher" role="tablist">
+            <button 
+              class:active={lang === 'sk'}
+              on:click={() => lang = 'sk'}
+              aria-label="Slovenčina"
+              role="tab"
+              aria-selected={lang === 'sk'}
+            >
+              SK
+            </button>
+            <button 
+              class:active={lang === 'en'}
+              on:click={() => lang = 'en'}
+              aria-label="English"
+              role="tab"
+              aria-selected={lang === 'en'}
+            >
+              EN
+            </button>
+          </div>   
+        </div>
       </div>
     </header>
 
     <div class="layout">
-      <!-- LEFT 1/4 – sidebar with form -->
+      <!-- LEFT 1/4 - sidebar with form -->
       <section class="card sidebar">
-        <!-- Period + Frequency + Amount + button -->
-        <h2>{translations[lang].period}</h2>
-        <div class="grid grid-2">
-          <div class="field-group">
-            <label>
-              <input
-                type="radio"
-                name="periodMode"
-                value="years"
-                bind:group={periodMode}
-              />
-              <span>{translations[lang].lastYears}</span>
-            </label>
-            {#if periodMode === 'years'}
-              <div class="field-inline">
-                <label>
-                  {translations[lang].yearsLabel}
-                  <input
-                    type="number"
-                    min="1"
-                    max="20"
-                    bind:value={yearsBack}
-                  />
-                </label>
-              </div>
-            {/if}
+          <div class="switcher">
+            <button
+              class:active={periodMode === 'years'}
+              on:click={() => (periodMode = 'years')}
+            >
+              {translations[lang].lastYears}
+            </button>
+
+            <button
+              class:active={periodMode === 'custom'}
+              on:click={() => (periodMode = 'custom')}
+            >
+              {translations[lang].customRange}
+            </button>
           </div>
 
-          <div class="field-group">
-            <label>
-              <input
-                type="radio"
-                name="periodMode"
-                value="custom"
-                bind:group={periodMode}
-              />
-              <span>{translations[lang].customRange}</span>
+          {#if periodMode === 'years'}
+            <label class="field">              
+                <span>{translations[lang].yearsLabel}</span>
+                <input type="number" min="1" max="13" bind:value={yearsBack} />              
             </label>
+          {:else}
+            <label class="field">
+              <span>{translations[lang].startDate}</span>
+                <input type="date" bind:value={startDate} />              
+            </label>
+            <label class="field">
+              <span>{translations[lang].endDate}</span>
+                <input type="date" bind:value={endDate} />              
+            </label>
+          {/if}
 
-            {#if periodMode === 'custom'}
-              <div class="field-inline">
-                <label>
-                  {translations[lang].startDate}
-                  <input type="date" bind:value={startDate} />
-                </label>
-                <label>
-                  {translations[lang].endDate}
-                  <input type="date" bind:value={endDate} />
-                </label>
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        <h2>{translations[lang].frequency}</h2>
-          <div class="field">
+          <label class="field">
             <span>{translations[lang].frequency}</span>
             <select bind:value={frequency}>
               <option value="daily">{translations[lang].freqDaily}</option>
@@ -650,13 +768,11 @@ function buildChartPaths(points: DataPoint[]) {
               <option value="bi-weekly">{translations[lang].freqBiWeekly}</option>
               <option value="monthly">{translations[lang].freqMonthly}</option>
             </select>
-          </div>
+          </label>        
 
-        <h2>{translations[lang].amountPerPeriod}</h2>
-        <div class="grid grid-2">
           <label class="field">
             <span>{translations[lang].amountPerPeriod}</span>
-            <input type="number" min="1" step="1" bind:value={amountPerPeriod} />
+            <input type="number" min="0" step="10" bind:value={amountPerPeriod} />
           </label>
 
           <label class="field">
@@ -665,11 +781,10 @@ function buildChartPaths(points: DataPoint[]) {
               <option value="eur">EUR</option>
               <option value="usd">USD</option>
             </select>
-          </label>
-        </div>
+          </label>        
 
-        <div class="actions">
-          <button class="btn primary" on:click|preventDefault={calculate}>
+        <div class="switcher calculate">
+          <button class="button" on:click|preventDefault={calculate}>
             {translations[lang].calculate}
           </button>
         </div>
@@ -690,7 +805,7 @@ function buildChartPaths(points: DataPoint[]) {
       
         <section class="card main-panel">
           <!-- TOP HALF: 2x2 stats -->
-          <div class="stats-grid">
+          <div class="flex flex-col gap-sm">
             <div class="stats-row">
               <div class="stat">
                 <span class="label">{translations[lang].totalInvested}</span>
@@ -714,8 +829,8 @@ function buildChartPaths(points: DataPoint[]) {
                 </span>
                 <span
                   class="value"
-                  class:positive={profit > 0}
-                  class:negative={profit < 0}
+                  class:text-positive={profit > 0}
+                  class:text-negative={profit < 0}
                 >
                   {formatFiat(profit)} ({profitPercent.toFixed(1)}%)
                 </span>
@@ -723,11 +838,9 @@ function buildChartPaths(points: DataPoint[]) {
             </div>
           </div>
 
-          <!-- BOTTOM FULL-WIDTH: everything else (lump sum, chart, exports) -->
-             
-            
+          <!-- BOTTOM FULL-WIDTH: everything else (lump sum, chart, exports) -->            
             <div class="chart-wrapper">
-              <h3>{translations[lang].graphTitle}</h3>
+              <h2>{translations[lang].graphTitle}</h2>
               <svg
                 viewBox="0 0 800 320"
                 preserveAspectRatio="none"
@@ -784,8 +897,8 @@ function buildChartPaths(points: DataPoint[]) {
                     <div class="lump-row">
                       <span>{translations[lang].lumpSumDifference}</span>
                       <strong
-                        class:positive={lumpSumDifference > 0}
-                        class:negative={lumpSumDifference < 0}
+                        class:text-positive={lumpSumDifference > 0}
+                        class:text-negative={lumpSumDifference < 0}
                       >
                         {formatFiat(lumpSumDifference)}
                       </strong>
@@ -802,14 +915,53 @@ function buildChartPaths(points: DataPoint[]) {
                 <div class="export">
                   <button class="btn" on:click={exportCsv}>
                     {translations[lang].exportCsv}
-                  </button>          
+                  </button>
+
+                  <button class="btn" on:click={toggleSharePanel}>
+                    {lang === 'sk' ? 'Zdieľať' : 'Share'}
+                  </button>
                 </div>
+
+                {#if showSharePanel}
+                  <div class="share-panel">
+                    <p class="share-title">
+                      {lang === 'sk' ? 'Zdieľaj svoj výsledok' : 'Share your result'}
+                    </p>
+
+                    <div class="share-input-wrapper">
+                      <input
+                        class="share-input"
+                        type="text"
+                        readonly
+                        value={getShareText()}
+                      />
+                    </div>
+
+                    <div class="share-buttons">
+                      <button class="btn share-x" type="button" on:click={shareToX}>
+                        X / Twitter
+                      </button>
+                      <button class="btn share-fb" type="button" on:click={shareToFacebook}>
+                        Facebook
+                      </button>
+                      <button class="btn" type="button" on:click={copyShareText}>
+                        {#if shareCopied}
+                          {lang === 'sk' ? 'Skopírované ✅' : 'Copied ✅'}
+                        {:else}
+                          {lang === 'sk' ? 'Kopírovať text' : 'Copy text'}
+                        {/if}
+                      </button>
+                      <button class="btn" type="button" on:click={toggleSharePanel}>
+                        {lang === 'sk' ? 'Zavrieť' : 'Close'}
+                      </button>
+                    </div>
+                  </div>
+                {/if}
               {/if}
+
         </section>      
     </div>
-    <p class="api-note">
-      <small>{translations[lang].apiNote}</small>
-    </p>
+    <Footer {translations} {lang} />
   </main>
 </div>
 
@@ -822,26 +974,16 @@ function buildChartPaths(points: DataPoint[]) {
     color: #e5e7eb;
   }
 
-  :global(html.dark) {
-    background-color: #020617;
-    color-scheme: dark;
-  }
-
-  :global(html:not(.dark)) body {
-    background-color: #f3f4f6;
-    color: #111827;
-  }
-
   .app {
     min-height: 100vh;
-    padding: 1.5rem;
+    padding: var(--space-lg);
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Main 1/4 + 3/4 layout */
   .layout {
     display: flex;
-    gap: 1.5rem;
+    gap: var(--space-md);
     align-items: flex-start;
   }
 
@@ -858,29 +1000,29 @@ function buildChartPaths(points: DataPoint[]) {
   }
 
   /* 2x2 stats at top of right column */
-  .stats-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
   .stats-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
   }
 
-  /* Responsive: on small screens stack sidebar and main under each other */
-  @media (max-width: 900px) {
-    .layout {
-      flex-direction: column;
-    }
+  .stat {
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    background: var(--color-card-dark);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
 
-    .sidebar,
-    .main-panel {
-      flex: none;
-      width: 100%;
-    }
+  .stat span:first-child {
+    font-size: 0.8rem;
+  }
+
+  .stat span:last-child {
+    font-size: 1.05rem;
   }
 
   .container {
@@ -888,16 +1030,25 @@ function buildChartPaths(points: DataPoint[]) {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
   }
 
   .header {
+    margin-bottom: 2rem;
+  }
+  
+  .header-content {
     display: flex;
     justify-content: space-between;
-    gap: 1.5rem;
-    align-items: flex-start;
+    align-items: center;
+    gap: 2rem;
     flex-wrap: wrap;
   }
+  
+  .header-right {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  } 
 
   h1 {
     font-size: 1.8rem;
@@ -910,41 +1061,13 @@ function buildChartPaths(points: DataPoint[]) {
     max-width: 32rem;
   }
 
-  .header-controls {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .control {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.85rem;
-  }
-
-  .control select {
-    padding: 0.3rem 0.5rem;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.7);
-    background: transparent;
-    color: inherit;
-  }
-
-  .toggle {
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
   .card {
-    background: rgba(15, 23, 42, 0.9);
+    background: var(--color-card-dark);
     color: inherit;
-    border-radius: 1rem;
-    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    border: 1px solid var(--border-color);
   }
 
   :global(html:not(.dark)) .card {
@@ -959,51 +1082,12 @@ function buildChartPaths(points: DataPoint[]) {
     font-size: 1.1rem;
   }
 
-  .grid {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .grid-2 {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-
-
-
-  .field-group {
-    border-radius: 0.75rem;
-    padding: 0.75rem;
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .field-group > label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-  }
-
-  .field-inline {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .field-inline label {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.85rem;
-    gap: 0.2rem;
-  }
-
   .field {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
     font-size: 0.9rem;
+    margin-top: 1rem;
   }
 
   .field span {
@@ -1029,14 +1113,8 @@ function buildChartPaths(points: DataPoint[]) {
     border-color: transparent;
   }
 
-  .actions {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: flex-end;
-  }
-
   .btn {
-    border-radius: 999px;
+    border-radius: 8px;
     padding: 0.55rem 1.2rem;
     border: 1px solid rgba(148, 163, 184, 0.8);
     background: transparent;
@@ -1044,13 +1122,6 @@ function buildChartPaths(points: DataPoint[]) {
     font-weight: 500;
     cursor: pointer;
     font-size: 0.95rem;
-  }
-
-  .btn.primary {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    border: none;
-    color: #f9fafb;
-    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
   }
 
   .btn:hover {
@@ -1101,16 +1172,7 @@ function buildChartPaths(points: DataPoint[]) {
     font-weight: 600;
   }
 
-  .stat .value.positive {
-    color: #4ade80;
-  }
-
-  .stat .value.negative {
-    color: #f97373;
-  }
-
-  .lumpsum {
-    
+  .lumpsum {    
     padding-top: 1rem;
     border-top: 1px dashed rgba(148, 163, 184, 0.5);
     font-size: 0.9rem;
@@ -1169,14 +1231,6 @@ function buildChartPaths(points: DataPoint[]) {
     margin-top: 0.4rem;
     font-size: 0.85rem;
     opacity: 0.9;
-  }
-
-  .positive {
-    color: #4ade80;
-  }
-
-  .negative {
-    color: #f97373;
   }
 
   .chart {
@@ -1239,16 +1293,136 @@ function buildChartPaths(points: DataPoint[]) {
   }
 
   .export {
-    //margin-top: 1.25rem;
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
+  }  
+
+  /* Period toggle switcher */
+  .switcher {
+    display: flex;  
+    padding: 4px;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden;
   }
 
-  .api-note {
+  .switcher button {
+    flex: 1;
+    padding: 0.4rem 0.6rem;
+    border: none;
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-color, #ffffffcc);
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+
+  }
+
+  .switcher button:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .switcher button.active {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    font-weight: 600;
+  }
+
+  .switcher.calculate {
+    margin-top: 1rem;
+  }
+  .switcher.calculate .button {
+    width: 100%;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    padding: 0.6rem 0;
+  }
+
+  .share-panel {
     margin-top: 0.75rem;
-    font-size: 0.8rem;
-    opacity: 0.7;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.9);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  :global(html:not(.dark)) .share-panel {
+    background: #f9fafb;
+  }
+
+  .share-title {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .share-input-wrapper {
+    display: flex;
+  }
+
+  .share-input {
+    flex: 1;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(148, 163, 184, 0.8);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.85rem;
+  }
+
+  .share-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .share-x {
+    border-color: rgba(59, 130, 246, 0.7);
+  }
+
+  .share-fb {
+    border-color: rgba(37, 99, 235, 0.7);
+  }
+
+  .hover-term {
+    font-weight: 800;
+    cursor: help;
+    position: relative;
+    background: transparent;
+    padding: 2px;
+    color: #fff;
+  }
+
+  .tooltip {
+    position: absolute;
+    background: #1f2937;
+    padding: .75rem;
+    border-radius: .5rem;
+    max-width: 600px;
+    font-size: .85rem;
+    line-height: 1.4rem;
+    border: 1px solid rgba(255,255,255,.15);
+    z-index: 100;
+  }
+
+  /* Responsive: on small screens stack sidebar and main under each other */
+  @media (max-width: 900px) {
+    .layout {
+      flex-direction: column;
+    }
+
+    .sidebar,
+    .main-panel {
+      flex: none;
+      width: 90%;
+    }
   }
 
   @media (max-width: 640px) {
@@ -1260,6 +1434,10 @@ function buildChartPaths(points: DataPoint[]) {
     }
     .header {
       flex-direction: column;
+      margin-bottom: 0;
+    }
+    .tooltip {
+      max-width: 260px;
     }
   }
 
