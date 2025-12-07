@@ -18,7 +18,7 @@
       <span class="api-note">{translations[lang].apiNote}</span>
       <h3>{translations[lang].otherTools}</h3>
       <ul>
-        <li><a href="https://vekslak.dvadsatjeden.org" target="_blank" rel="noopener">Vexlák</a></li>
+        <li><a href="https://vekslak.dvadsatjeden.org" target="_blank" rel="noopener">Vekslák</a></li>
         <li><a href="https://cbdc.icu" target="_blank" rel="noopener">CBDC vs. Bitcoin</a></li>
         <li><a href="https://www.dvadsatjeden.org/vzdelavanie/ostatne/#tab-nstroje" target="_blank" rel="noopener">{translations[lang].more}</a></li>
       </ul>
