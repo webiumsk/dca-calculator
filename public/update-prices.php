@@ -19,8 +19,8 @@ if (!function_exists('str_starts_with')) {
 // Today's date in UTC in the required format
 $todayUtc = gmdate('Y-m-d 00:00:00 \U\T\C');
 
-// Fetch price from CoinGecko
-$apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur,usd';
+// Fetch price from Blockchain.info
+$apiUrl = 'https://blockchain.info/ticker';
 $json = @file_get_contents($apiUrl);
 
 if ($json === false) {
@@ -29,14 +29,14 @@ if ($json === false) {
 }
 
 $data = json_decode($json, true);
-if (!isset($data['bitcoin']['eur'], $data['bitcoin']['usd'])) {
+if (!isset($data['EUR']['last'], $data['USD']['last'])) {
     http_response_code(500);
-    die("Invalid CoinGecko response.\n");
+    die("Invalid Blockchain.info response.\n");
 }
 
 $prices = [
-    'eur' => $data['bitcoin']['eur'],
-    'usd' => $data['bitcoin']['usd'],
+    'eur' => $data['EUR']['last'],
+    'usd' => $data['USD']['last'],
 ];
 
 // Helper: create CSV with header if missing
