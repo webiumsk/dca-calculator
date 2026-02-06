@@ -150,7 +150,7 @@ If you want to add features (e.g., more charts, additional currencies, languages
 ### 🧡 Acknowledgements
 
 Project inspired by the idea of helping newcomers understand long-term Bitcoin saving strategies.
-- [CoinGecko API](https://www.coingecko.com/en/api) for BTC prices history
+- [Blockchain.info](https://blockchain.info) for BTC prices history
 - [Dvadsatjeden](https://www.dvadsatjeden.org/) Bitcoin community for inspiration
 
 ## ⭐ Support
@@ -161,11 +161,15 @@ If you find this project useful, please consider:
 - 🐛 Reporting bugs
 - 💡 Suggesting new features
 - 🔀 Contributing code
-- ⚡ Donating to [sirius@dvadsatjeden.org](lightning:sirius@dvadsatjeden.org)
+- ⚡ Donating to [dca@dvadsatjeden.org](lightning:dca@dvadsatjeden.org)
 
 ---
 
 ## 📄 Changelog
+
+### v1.0.2 (6. Feb 2026)
+- Fixed caching issues
+- Switch bitcoin data source from CoinGecko to Blockchain.info 
 
 ### v1.0.1 (6. Dec 2025)
 - Removed Dark Mode theme toggle
